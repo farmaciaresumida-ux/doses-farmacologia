@@ -5,10 +5,11 @@
 # NUNCA suba o .env para o GitHub
 
 # 1. Token do bot Telegram (obtido no @BotFather)
-TELEGRAM_TOKEN=seu_token_aqui
+TELEGRAM_TOKEN= 7739855091:AAGI6ie8gRU9S2qts_tctp3yx-ZRg_CEVXkV
+
 
 # 2. Chave da API da Anthropic (claude.ai/settings → API)
 ANTHROPIC_API_KEY=sua_chave_aqui
 
 # 3. Seu ID pessoal no Telegram (obtido no @userinfobot)
-SEU_TELEGRAM_ID=seu_id_numerico_aqui
+SEU_TELEGRAM_ID=8430315363
