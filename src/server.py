@@ -10,9 +10,9 @@ from src.newsletter_agent import NewsletterAgent
 
 
 def _load_agent() -> NewsletterAgent:
-    owner_contact = os.getenv("OWNER_TELEGRAM_CHAT_ID") or os.getenv(
-        "OWNER_WHATSAPP", "8430315363"
-    )
+    owner_contact = os.getenv("OWNER_TELEGRAM_CHAT_ID") or os.getenv("OWNER_WHATSAPP")
+    if not owner_contact:
+        owner_contact = "SEU_CHAT_ID"
     raw_groups = os.getenv("GROUP_IDS", "group-1,group-2")
     group_ids = [g.strip() for g in raw_groups.split(",") if g.strip()]
     business_context = os.getenv("BUSINESS_CONTEXT", "farmacologia prática")

@@ -54,6 +54,8 @@ No Railway você vai configurar estas variáveis:
 - `TELEGRAM_BOT_TOKEN`
 - `GROUP_IDS` (separados por vírgula)
 - `BUSINESS_CONTEXT`
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` (opcional)
 - `ZAPI_INSTANCE_ID`
 - `ZAPI_INSTANCE_TOKEN`
 - `ZAPI_SECURITY_TOKEN`
@@ -66,11 +68,25 @@ OWNER_TELEGRAM_CHAT_ID=8430315363
 TELEGRAM_BOT_TOKEN=8482503703:AAELAzVFrHX10JJmdXqP0y6k0vee2oEN5lA8482503703:AAELAzVFrHX10JJmdXqP0y6k0vee2oEN5lA
 GROUP_IDS=1203630xxxxxxxx@g.us,1203630yyyyyyyy@g.us
 BUSINESS_CONTEXT=farmacologia clínica aplicada
-ZAPI_INSTANCE_ID=3EF3E7A38E7D416AC61C32059B4CF0B7
-ZAPI_INSTANCE_TOKEN=E14C60A36543067BFB3F0D82
+OPENAI_API_KEY=sk-proj-xxxxxxxx
+OPENAI_MODEL=gpt-4o-mini
+ZAPI_INSTANCE_ID=SEU_INSTANCE_ID
+ZAPI_INSTANCE_TOKEN=SEU_INSTANCE_TOKEN
 ZAPI_SECURITY_TOKEN=SEU_SECURITY_TOKEN
 RUN_HOUR_BRT=8
 ```
+
+---
+
+
+## 3.1) Onde preencher a API Key da OpenAI
+
+Você vai preencher em `OPENAI_API_KEY`:
+
+- **Local**: no arquivo `.env`
+- **Railway**: em **Variables**
+
+Se não preencher, o projeto sobe, mas fica com gerador stub (sem chamada real de IA).
 
 ---
 
@@ -157,6 +173,16 @@ Se tudo acima funcionar, seu pipeline está pronto.
 ### Erro no Railway
 - App não sobe: conferir command/start e logs.
 - Variável ausente: revisar seção Variables.
+
+### Erro no Railway: “Error creating build plan with Railpack”
+Esse erro normalmente ocorre quando o Railway não detecta stack Python corretamente.
+
+Checklist:
+- Verifique se `requirements.txt` existe na raiz.
+- Verifique se `Procfile` existe na raiz com start command web.
+- Verifique se o deploy está apontando para a branch certa.
+- Faça novo deploy após commit desses arquivos.
+
 
 ---
 

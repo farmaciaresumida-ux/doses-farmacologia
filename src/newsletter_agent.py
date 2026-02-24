@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+import os
 from typing import Dict, List, Literal
 
 NewsletterKind = Literal["caso_clinico", "noticia"]
@@ -18,7 +19,11 @@ class Draft:
 
 
 class LLMClient:
-    """Stub de LLM. Troque por integração real."""
+    """Stub de LLM. Troque por integração real (OpenAI, etc)."""
+
+    def __init__(self) -> None:
+        self.api_key = os.getenv("OPENAI_API_KEY", "")
+        self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     def generate_topic_suggestions(self, business_context: str) -> List[str]:
         return [
