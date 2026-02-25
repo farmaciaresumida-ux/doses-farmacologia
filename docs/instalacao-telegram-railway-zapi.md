@@ -133,6 +133,23 @@ git push -u origin work
 
 ---
 
+
+## 6.1) Habilitar comandos do Telegram (/start)
+
+Se o `/start` não responde, o webhook ainda não está configurado.
+
+Execute (troque TOKEN e URL):
+
+```bash
+curl -sS "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://SEU_APP.up.railway.app/telegram/webhook"
+```
+
+Depois disso, no Telegram:
+- envie `/start`
+- teste também `/status`
+
+---
+
 ## 7) Fluxo diário de aprovação (operação)
 
 Fluxo sugerido:
@@ -144,6 +161,20 @@ Fluxo sugerido:
    - botões/comandos de aprovação
 3. Você aprova.
 4. Sistema dispara automaticamente nos grupos de `GROUP_IDS` via Z-API.
+
+---
+
+## 7.1) Teste real imediato (sem esperar scheduler)
+
+Use os comandos abaixo no terminal:
+
+```bash
+curl -sS https://SEU_APP.up.railway.app/status
+curl -sS -X POST https://SEU_APP.up.railway.app/test-real
+```
+
+- `/status` confirma se as integrações foram carregadas (`telegram_enabled` e `zapi_enabled`).
+- `/test-real` envia uma mensagem real no Telegram do dono e no primeiro grupo de `GROUP_IDS`.
 
 ---
 

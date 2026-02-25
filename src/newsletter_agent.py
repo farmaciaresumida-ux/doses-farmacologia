@@ -5,6 +5,8 @@ from datetime import date
 import os
 from typing import Dict, List, Literal
 
+import requests
+
 NewsletterKind = Literal["caso_clinico", "noticia"]
 
 
@@ -33,11 +35,58 @@ class LLMClient:
         ]
 
 
-class WhatsAppClient:
-    """Stub de WhatsApp. Troque por API oficial (Twilio/BSP/Meta)."""
+class TelegramClient:
+    def __init__(self) -> None:
+        self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 
-    def send_message(self, to: str, text: str) -> None:
-        print(f"[WHATSAPP -> {to}]\n{text}\n")
+    @property
+    def enabled(self) -> bool:
+        return bool(self.bot_token)
+
+    def send_message(self, chat_id: str, text: str) -> None:
+        if not self.enabled:
+            print(f"[TELEGRAM_STUB -> {chat_id}]\n{text}\n")
+            return
+
+        url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+        resp = requests.post(
+            url,
+            json={"chat_id": chat_id, "text": text},
+            timeout=20,
+        )
+        resp.raise_for_status()
+
+
+class ZAPIClient:
+    def __init__(self) -> None:
+        self.instance_id = os.getenv("ZAPI_INSTANCE_ID", "").strip()
+        self.instance_token = os.getenv("ZAPI_INSTANCE_TOKEN", "").strip()
+        self.security_token = os.getenv("ZAPI_SECURITY_TOKEN", "").strip()
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.instance_id and self.instance_token)
+
+    def send_group_message(self, phone: str, text: str) -> None:
+        if not self.enabled:
+            print(f"[ZAPI_STUB -> {phone}]\n{text}\n")
+            return
+
+        url = (
+            f"https://api.z-api.io/instances/{self.instance_id}/token/{self.instance_token}"
+            "/send-text"
+        )
+        headers = {"Content-Type": "application/json"}
+        if self.security_token:
+            headers["Client-Token"] = self.security_token
+
+        resp = requests.post(
+            url,
+            headers=headers,
+            json={"phone": phone, "message": text},
+            timeout=20,
+        )
+        resp.raise_for_status()
 
 
 @dataclass
@@ -46,8 +95,23 @@ class NewsletterAgent:
     group_ids: List[str]
     business_context: str
     llm: LLMClient = field(default_factory=LLMClient)
-    whatsapp: WhatsAppClient = field(default_factory=WhatsAppClient)
+    telegram: TelegramClient = field(default_factory=TelegramClient)
+    zapi: ZAPIClient = field(default_factory=ZAPIClient)
     drafts: Dict[str, Draft] = field(default_factory=dict)
+
+    def delivery_status(self) -> dict:
+        return {
+            "telegram_enabled": self.telegram.enabled,
+            "zapi_enabled": self.zapi.enabled,
+            "owner_contact": self.owner_number,
+            "group_count": len(self.group_ids),
+        }
+
+    def send_owner_message(self, text: str) -> None:
+        self.telegram.send_message(self.owner_number, text)
+
+    def send_group_message(self, group_id: str, text: str) -> None:
+        self.zapi.send_group_message(group_id, text)
 
     def daily_scheduler(self, when: date | None = None) -> Draft:
         when = when or date.today()
@@ -75,7 +139,7 @@ class NewsletterAgent:
             f"Newsletter pronta para aprovação:\n\n{draft.content}\n\n"
             f"Para aprovar: POST /approval {{'draft_id':'{draft.draft_id}','approved':true}}"
         )
-        self.whatsapp.send_message(self.owner_number, msg)
+        self.send_owner_message(msg)
 
     def set_approval(self, draft_id: str, approved: bool) -> Draft:
         if draft_id not in self.drafts:
@@ -87,21 +151,31 @@ class NewsletterAgent:
         if approved:
             self.dispatch_to_groups(draft)
         else:
-            self.whatsapp.send_message(
-                self.owner_number,
-                f"Draft {draft_id} reprovado. Posso gerar nova versão mantendo o mesmo formato.",
+            self.send_owner_message(
+                f"Draft {draft_id} reprovado. Posso gerar nova versão mantendo o mesmo formato."
             )
 
         return draft
 
     def dispatch_to_groups(self, draft: Draft) -> None:
         for group_id in self.group_ids:
-            self.whatsapp.send_message(group_id, draft.content)
+            self.send_group_message(group_id, draft.content)
 
-        self.whatsapp.send_message(
-            self.owner_number,
-            f"Disparo concluído para {len(self.group_ids)} grupo(s). Draft: {draft.draft_id}",
+        self.send_owner_message(
+            f"Disparo concluído para {len(self.group_ids)} grupo(s). Draft: {draft.draft_id}"
         )
+
+    def test_real_delivery(self) -> dict:
+        status = self.delivery_status()
+        self.send_owner_message("✅ Teste de integração: mensagem enviada para o Telegram do dono.")
+
+        group_result = "skipped"
+        if self.group_ids:
+            group_id = self.group_ids[0]
+            self.send_group_message(group_id, "✅ Teste de integração: mensagem de teste enviada pela automação.")
+            group_result = f"sent:{group_id}"
+
+        return {**status, "group_test": group_result}
 
     def _build_newsletter(self, kind: NewsletterKind, issue_number: int, topics: List[str]) -> str:
         if kind == "caso_clinico":

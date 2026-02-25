@@ -34,3 +34,52 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python -m uvicorn src.server:app --reload --port 8000
 ```
+
+
+## Como fazer teste real (Telegram + Z-API)
+
+1. Verifique status da integração:
+
+```bash
+curl -sS https://SEU_APP.up.railway.app/status
+```
+
+2. Dispare um teste real agora (manda 1 mensagem no Telegram do dono e 1 no primeiro grupo da lista):
+
+```bash
+curl -sS -X POST https://SEU_APP.up.railway.app/test-real
+```
+
+3. Gere newsletter do dia:
+
+```bash
+curl -sS -X POST https://SEU_APP.up.railway.app/run-daily
+```
+
+4. Aprove com o `draft_id` retornado:
+
+```bash
+curl -sS -X POST https://SEU_APP.up.railway.app/approval \
+  -H "Content-Type: application/json" \
+  -d '{"draft_id":"draft-2026-02-24","approved":true}'
+```
+
+
+## Por que o /start não responde?
+
+Porque o Telegram só entrega comandos para o seu backend se você configurar webhook.
+
+1. Faça deploy da versão atual.
+2. Configure o webhook (substitua TOKEN e URL):
+
+```bash
+curl -sS "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook?url=https://SEU_APP.up.railway.app/telegram/webhook"
+```
+
+3. Teste no Telegram com `/start`.
+
+Comandos suportados no chat:
+- `/start`
+- `/status`
+- `/test-real`
+- `/run-daily`

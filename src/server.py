@@ -28,6 +28,16 @@ app = FastAPI(title="Newsletter Agent")
 agent = _load_agent()
 
 
+def _status_text() -> str:
+    s = agent.delivery_status()
+    return (
+        "📡 Status da integração\n"
+        f"- Telegram: {'ativo' if s['telegram_enabled'] else 'inativo'}\n"
+        f"- Z-API: {'ativo' if s['zapi_enabled'] else 'inativo'}\n"
+        f"- Grupos configurados: {s['group_count']}"
+    )
+
+
 class ApprovalIn(BaseModel):
     draft_id: str
     approved: bool
@@ -36,6 +46,19 @@ class ApprovalIn(BaseModel):
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/status")
+def status() -> dict:
+    return agent.delivery_status()
+
+
+@app.post("/test-real")
+def test_real() -> dict:
+    try:
+        return agent.test_real_delivery()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Falha no teste real: {exc}") from exc
 
 
 @app.post("/run-daily")
@@ -57,3 +80,37 @@ def approval(payload: ApprovalIn) -> dict:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     return {"draft_id": draft.draft_id, "approved": draft.approved, "kind": draft.kind}
+
+
+@app.post("/telegram/webhook")
+def telegram_webhook(payload: dict) -> dict:
+    message = payload.get("message") or payload.get("edited_message") or {}
+    text = (message.get("text") or "").strip()
+    chat_id = str((message.get("chat") or {}).get("id") or "")
+
+    if not chat_id:
+        return {"ok": True, "ignored": True}
+
+    if text.startswith("/start"):
+        agent.telegram.send_message(
+            chat_id,
+            "✅ Bot online!\nComandos: /status, /test-real, /run-daily",
+        )
+        return {"ok": True, "command": "/start"}
+
+    if text.startswith("/status"):
+        agent.telegram.send_message(chat_id, _status_text())
+        return {"ok": True, "command": "/status"}
+
+    if text.startswith("/test-real"):
+        result = agent.test_real_delivery()
+        agent.telegram.send_message(chat_id, f"Teste executado: {result}")
+        return {"ok": True, "command": "/test-real"}
+
+    if text.startswith("/run-daily"):
+        draft = agent.daily_scheduler(date.today())
+        agent.telegram.send_message(chat_id, f"Draft criado: {draft.draft_id} ({draft.kind})")
+        return {"ok": True, "command": "/run-daily"}
+
+    agent.telegram.send_message(chat_id, "Comandos disponíveis: /start, /status, /test-real, /run-daily")
+    return {"ok": True, "command": "unknown"}
